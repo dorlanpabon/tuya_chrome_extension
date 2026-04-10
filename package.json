@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "tsc && vite build"
+    "build:assets": "powershell -ExecutionPolicy Bypass -File scripts/generate-store-assets.ps1",
+    "build": "npm run build:assets && tsc && vite build",
+    "package:webstore": "npm run build && powershell -ExecutionPolicy Bypass -Command \"if (Test-Path 'webstore-package.zip') { Remove-Item 'webstore-package.zip' -Force }; Compress-Archive -Path dist\\* -DestinationPath webstore-package.zip\""
   },
   "dependencies": {
     "preact": "^10.27.2"

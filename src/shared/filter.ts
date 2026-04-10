@@ -1,5 +1,32 @@
 import type { Device } from "./models";
 
+export function orderDevices(
+  devices: Device[],
+  deviceOrder: string[],
+): Device[] {
+  if (deviceOrder.length === 0) {
+    return devices;
+  }
+
+  const orderIndex = new Map(deviceOrder.map((deviceId, index) => [deviceId, index]));
+
+  return [...devices].sort((left, right) => {
+    const leftIndex = orderIndex.get(left.id);
+    const rightIndex = orderIndex.get(right.id);
+
+    if (leftIndex === undefined && rightIndex === undefined) {
+      return left.name.localeCompare(right.name);
+    }
+    if (leftIndex === undefined) {
+      return 1;
+    }
+    if (rightIndex === undefined) {
+      return -1;
+    }
+    return leftIndex - rightIndex;
+  });
+}
+
 export function filterDevices(
   devices: Device[],
   search: string,

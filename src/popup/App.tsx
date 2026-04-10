@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { extensionApi } from "./api";
-import { filterDevices } from "../shared/filter";
+import { filterDevices, orderDevices } from "../shared/filter";
 import {
   buildDefaultChannelName,
   formatActionTime,
@@ -36,6 +36,9 @@ interface Toast {
 interface AppState {
   bootstrapping: boolean;
   refreshing: boolean;
+  showingCachedState: boolean;
+  orderEditorOpen: boolean;
+  settingsOpen: boolean;
   testingConnection: boolean;
   savingConfig: boolean;
   hasConfig: boolean;
@@ -53,6 +56,9 @@ interface AppState {
 const INITIAL_STATE: AppState = {
   bootstrapping: true,
   refreshing: false,
+  showingCachedState: false,
+  orderEditorOpen: false,
+  settingsOpen: false,
   testingConnection: false,
   savingConfig: false,
   hasConfig: false,
@@ -70,36 +76,77 @@ const INITIAL_STATE: AppState = {
   toasts: [],
 };
 
+const SILENT_REFRESH_COOLDOWN_MS = 1_500;
+
 export function App() {
   const [state, setState] = useState(INITIAL_STATE);
-  const showSetup = !state.hasConfig;
-  const showConfigPanel = showSetup || state.uiPreferences.viewMode === "developer";
+  const lastSilentRefreshAtRef = useRef(0);
+  const silentRefreshInFlightRef = useRef(false);
+  const showSetup = !state.bootstrapping && !state.hasConfig;
+  const showConfigPanel =
+    !state.bootstrapping &&
+    (showSetup || state.settingsOpen || state.uiPreferences.viewMode === "developer");
+  const orderedDevices = useMemo(
+    () => orderDevices(state.devices, state.uiPreferences.deviceOrder),
+    [state.devices, state.uiPreferences.deviceOrder],
+  );
 
   const visibleDevices = useMemo(
-    () => filterDevices(state.devices, state.searchQuery, state.statusFilter),
-    [state.devices, state.searchQuery, state.statusFilter],
+    () => filterDevices(orderedDevices, state.searchQuery, state.statusFilter),
+    [orderedDevices, state.searchQuery, state.statusFilter],
   );
 
   useEffect(() => {
     void bootstrap();
   }, []);
 
+  useEffect(() => {
+    if (!state.hasConfig || state.bootstrapping) {
+      return undefined;
+    }
+
+    const syncVisibleState = () => {
+      if (document.visibilityState === "visible") {
+        void requestSilentRefresh();
+      }
+    };
+
+    window.addEventListener("focus", syncVisibleState);
+    document.addEventListener("visibilitychange", syncVisibleState);
+    return () => {
+      window.removeEventListener("focus", syncVisibleState);
+      document.removeEventListener("visibilitychange", syncVisibleState);
+    };
+  }, [state.hasConfig, state.bootstrapping]);
+
   async function bootstrap() {
     try {
       const payload = await extensionApi.bootstrap();
+      const hasCachedDevices = payload.devices.length > 0;
+      const shouldSyncLiveState = payload.hasConfig;
       setState((current) => ({
         ...current,
         bootstrapping: false,
+        refreshing: shouldSyncLiveState,
+        showingCachedState: shouldSyncLiveState && hasCachedDevices,
         hasConfig: payload.hasConfig,
         configDraft: payload.configDraft,
         devices: payload.devices,
         actionLog: payload.actionLog,
         uiPreferences: payload.uiPreferences,
-        connection: payload.connection,
+        connection: shouldSyncLiveState
+          ? {
+              state: "connected",
+              message: hasCachedDevices
+                ? "Showing cached state while checking Tuya Cloud."
+                : "Connecting to Tuya Cloud...",
+              lastCheckedAt: payload.connection.lastCheckedAt,
+            }
+          : payload.connection,
       }));
 
-      if (payload.hasConfig) {
-        void refreshDevices(true);
+      if (shouldSyncLiveState) {
+        void requestSilentRefresh(true);
       }
     } catch (error) {
       setState((current) => ({
@@ -115,18 +162,54 @@ export function App() {
     }
   }
 
+  async function requestSilentRefresh(force = false) {
+    if (silentRefreshInFlightRef.current || state.refreshing) {
+      return;
+    }
+
+    const now = Date.now();
+    if (!force && now - lastSilentRefreshAtRef.current < SILENT_REFRESH_COOLDOWN_MS) {
+      return;
+    }
+
+    silentRefreshInFlightRef.current = true;
+    lastSilentRefreshAtRef.current = now;
+
+    try {
+      await refreshDevices(true);
+    } finally {
+      silentRefreshInFlightRef.current = false;
+    }
+  }
+
   async function refreshDevices(silent = false) {
-    setState((current) => ({ ...current, refreshing: true }));
+    setState((current) => ({
+      ...current,
+      refreshing: true,
+      showingCachedState: silent && current.devices.length > 0,
+      connection:
+        silent && current.hasConfig
+          ? {
+              state: "connected",
+              message:
+                current.devices.length > 0
+                  ? "Showing cached state while checking Tuya Cloud."
+                  : "Loading devices from Tuya Cloud...",
+              lastCheckedAt: current.connection.lastCheckedAt ?? null,
+            }
+          : current.connection,
+    }));
     try {
       const devices = await extensionApi.refreshDevices();
       setState((current) => ({
         ...current,
         refreshing: false,
+        showingCachedState: false,
         hasConfig: true,
         devices,
         connection: {
           state: "connected",
-          message: silent ? "Tuya Cloud synced." : "Devices refreshed from Tuya Cloud.",
+          message: silent ? "Live state synced." : "Devices refreshed from Tuya Cloud.",
           lastCheckedAt: Date.now(),
         },
       }));
@@ -134,9 +217,13 @@ export function App() {
       setState((current) => ({
         ...current,
         refreshing: false,
+        showingCachedState: silent && current.devices.length > 0,
         connection: {
           state: "error",
-          message: toMessage(error),
+          message:
+            silent && current.devices.length > 0
+              ? "Unable to refresh live state. Showing cached devices."
+              : toMessage(error),
           lastCheckedAt: Date.now(),
         },
       }));
@@ -183,6 +270,7 @@ export function App() {
         ...current,
         savingConfig: false,
         hasConfig: true,
+        settingsOpen: false,
       }));
       pushToast("success", "Configuration synced with Chrome.");
       await refreshDevices();
@@ -193,14 +281,56 @@ export function App() {
   }
 
   async function setViewMode(viewMode: UiPreferences["viewMode"]) {
+    const nextPreferences = {
+      ...state.uiPreferences,
+      viewMode,
+    };
     setState((current) => ({
       ...current,
-      uiPreferences: { viewMode },
+      uiPreferences: nextPreferences,
     }));
 
     try {
-      await extensionApi.saveUiPreferences({ viewMode });
+      await extensionApi.saveUiPreferences(nextPreferences);
     } catch (error) {
+      pushToast("error", toMessage(error));
+    }
+  }
+
+  async function moveDevice(deviceId: string, direction: -1 | 1) {
+    const currentOrder = deriveDeviceOrder(orderedDevices);
+    const index = currentOrder.indexOf(deviceId);
+    if (index < 0) {
+      return;
+    }
+
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= currentOrder.length) {
+      return;
+    }
+
+    const nextOrder = [...currentOrder];
+    const [moved] = nextOrder.splice(index, 1);
+    nextOrder.splice(nextIndex, 0, moved);
+
+    const previousPreferences = state.uiPreferences;
+    const nextPreferences = {
+      ...state.uiPreferences,
+      deviceOrder: nextOrder,
+    };
+
+    setState((current) => ({
+      ...current,
+      uiPreferences: nextPreferences,
+    }));
+
+    try {
+      await extensionApi.saveUiPreferences(nextPreferences);
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        uiPreferences: previousPreferences,
+      }));
       pushToast("error", toMessage(error));
     }
   }
@@ -349,7 +479,35 @@ export function App() {
                 Dev
               </button>
             </div>
-            <button class="icon-button" onClick={() => void refreshDevices()}>
+            <button
+              class={`icon-button ${showConfigPanel && !showSetup ? "is-active" : ""}`}
+              disabled={state.bootstrapping}
+              onClick={() =>
+                setState((current) => ({
+                  ...current,
+                  settingsOpen: !current.settingsOpen,
+                  orderEditorOpen: false,
+                }))
+              }
+              title="Configuration"
+            >
+              {renderSettingsIcon()}
+            </button>
+            <button
+              class={`icon-button ${state.orderEditorOpen ? "is-active" : ""}`}
+              disabled={!state.hasConfig || orderedDevices.length < 2}
+              onClick={() =>
+                setState((current) => ({
+                  ...current,
+                  settingsOpen: false,
+                  orderEditorOpen: !current.orderEditorOpen,
+                }))
+              }
+              title="Organize devices"
+            >
+              {renderSortIcon()}
+            </button>
+            <button class="icon-button" disabled={state.refreshing} onClick={() => void refreshDevices()}>
               {renderRefreshIcon()}
             </button>
           </div>
@@ -392,6 +550,68 @@ export function App() {
           </div>
         </div>
       </header>
+
+      {state.hasConfig && (state.refreshing || state.showingCachedState) && (
+        <section class={`sync-banner ${state.refreshing ? "is-active" : ""}`}>
+          <span class="sync-banner__dot" />
+          <p>
+            {state.refreshing
+              ? "Checking latest device state in Tuya Cloud..."
+              : "Showing cached device state."}
+          </p>
+        </section>
+      )}
+
+      {state.orderEditorOpen && orderedDevices.length > 1 && (
+        <section class="panel order-panel">
+          <div class="panel__header">
+            <div>
+              <h2>Device order</h2>
+              <p>Move devices and the order is saved to Chrome sync.</p>
+            </div>
+            <button
+              class="icon-button"
+              onClick={() =>
+                setState((current) => ({
+                  ...current,
+                  orderEditorOpen: false,
+                }))
+              }
+              title="Close ordering"
+            >
+              {renderCloseIcon()}
+            </button>
+          </div>
+          <div class="order-list">
+            {orderedDevices.map((device, index) => (
+              <div class="order-item" key={`order-${device.id}`}>
+                <div class="order-item__copy">
+                  <strong>{device.name}</strong>
+                  <p>{device.gangCount} ch</p>
+                </div>
+                <div class="order-item__actions">
+                  <button
+                    class="icon-button"
+                    disabled={index === 0}
+                    onClick={() => void moveDevice(device.id, -1)}
+                    title="Move up"
+                  >
+                    {renderArrowUpIcon()}
+                  </button>
+                  <button
+                    class="icon-button"
+                    disabled={index === orderedDevices.length - 1}
+                    onClick={() => void moveDevice(device.id, 1)}
+                    title="Move down"
+                  >
+                    {renderArrowDownIcon()}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {showConfigPanel && (
         <section class="panel">
@@ -718,6 +938,10 @@ function applyStatusesToDevices(
   );
 }
 
+function deriveDeviceOrder(devices: Device[]): string[] {
+  return devices.map((device) => device.id);
+}
+
 function getCloudName(device: Device): string {
   const summary = device.raw.summary as { name?: unknown } | undefined;
   return typeof summary?.name === "string" && summary.name.trim().length > 0
@@ -769,6 +993,54 @@ function renderRefreshIcon() {
       <path d="M4 5v4h4" />
       <path d="M4 13a8 8 0 0 0 14.8 4" />
       <path d="M20 19v-4h-4" />
+    </svg>
+  );
+}
+
+function renderSettingsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 8.7a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6Z" />
+      <path d="M19.4 13.1v-2.2l-2-.5a5.9 5.9 0 0 0-.5-1.2l1.1-1.7-1.6-1.6-1.7 1.1a5.9 5.9 0 0 0-1.2-.5l-.5-2h-2.2l-.5 2a5.9 5.9 0 0 0-1.2.5L7.4 5.9 5.8 7.5l1.1 1.7a5.9 5.9 0 0 0-.5 1.2l-2 .5v2.2l2 .5a5.9 5.9 0 0 0 .5 1.2l-1.1 1.7 1.6 1.6 1.7-1.1a5.9 5.9 0 0 0 1.2.5l.5 2h2.2l.5-2a5.9 5.9 0 0 0 1.2-.5l1.7 1.1 1.6-1.6-1.1-1.7a5.9 5.9 0 0 0 .5-1.2Z" />
+    </svg>
+  );
+}
+
+function renderSortIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 6h10" />
+      <path d="M7 12h7" />
+      <path d="M7 18h4" />
+      <path d="M17 10V5" />
+      <path d="M15 7l2-2 2 2" />
+    </svg>
+  );
+}
+
+function renderArrowUpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 17V7" />
+      <path d="M8 11l4-4 4 4" />
+    </svg>
+  );
+}
+
+function renderArrowDownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 7v10" />
+      <path d="M8 13l4 4 4-4" />
+    </svg>
+  );
+}
+
+function renderCloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 7l10 10" />
+      <path d="M17 7L7 17" />
     </svg>
   );
 }

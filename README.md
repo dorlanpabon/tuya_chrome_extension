@@ -35,6 +35,7 @@ Ruta local:
 - Control ON/OFF por canal
 - Modo `User` compacto
 - Modo `Developer` con alias, ids y log local
+- Orden manual de dispositivos guardado en `chrome.storage.sync`
 
 ## Obtener Access ID y Access Secret
 
@@ -74,6 +75,7 @@ Si luego quieres endurecer esto, el siguiente paso correcto es:
 ```bash
 npm install
 npm run build
+npm run package:webstore
 ```
 
 ## Cargar en Chrome
@@ -103,5 +105,19 @@ npm run build
 ## Notas
 
 - `chrome.storage.sync` guarda configuracion y alias.
+- `chrome.storage.sync` tambien guarda preferencias UI y orden manual de dispositivos.
 - `chrome.storage.local` guarda cache de dispositivos y action log para que el popup abra rapido.
-- El popup usa cache inmediata y luego refresca desde Tuya Cloud.
+- El popup usa cache inmediata y luego refresca el estado real desde Tuya Cloud sin bloquear la UI.
+- Al abrir el popup o al recuperar foco, la extension intenta resincronizar el estado para corregir cambios hechos desde el telefono o desde otra app.
+
+## Chrome Web Store
+
+- Scripts:
+  - `npm run build:assets` genera iconos y piezas visuales para la tienda.
+  - `npm run package:webstore` construye `dist` y crea `webstore-package.zip`.
+- Assets generados:
+  - `public/icons`
+  - `store-assets/chrome-web-store`
+- Documentacion para publicar:
+  - `docs/chrome-web-store.md`
+  - `docs/privacy-policy.md`

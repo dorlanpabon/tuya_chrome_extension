@@ -101,15 +101,19 @@ function replaceByKey<T>(
 }
 
 function normalizeUiPreferences(value: unknown): UiPreferences {
-  if (
-    value &&
-    typeof value === "object" &&
-    (value as UiPreferences).viewMode === "developer"
-  ) {
-    return { viewMode: "developer" };
+  if (!value || typeof value !== "object") {
+    return { ...DEFAULT_UI_PREFERENCES };
   }
 
-  return { viewMode: "user" };
+  const raw = value as Partial<UiPreferences>;
+  return {
+    viewMode: raw.viewMode === "developer" ? "developer" : "user",
+    deviceOrder: Array.isArray(raw.deviceOrder)
+      ? raw.deviceOrder
+          .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+          .map((entry) => entry.trim())
+      : [],
+  };
 }
 
 function normalizeConfig(value: unknown): AppConfig | null {
