@@ -113,6 +113,10 @@ function normalizeUiPreferences(value: unknown): UiPreferences {
           .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
           .map((entry) => entry.trim())
       : [],
+    locale:
+      raw.locale === "es" || raw.locale === "en" || raw.locale === "system"
+        ? raw.locale
+        : DEFAULT_UI_PREFERENCES.locale,
   };
 }
 

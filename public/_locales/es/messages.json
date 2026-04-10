@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "Tuya Desk"
+  },
+  "extDescription": {
+    "message": "Extension compacta de Chrome para controlar interruptores Tuya por canal."
+  },
+  "actionTitle": {
+    "message": "Abrir Tuya Desk"
+  }
+}

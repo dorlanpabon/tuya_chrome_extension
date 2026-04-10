@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "Tuya Desk"
+  },
+  "extDescription": {
+    "message": "Compact Chrome extension to control Tuya light switches by channel."
+  },
+  "actionTitle": {
+    "message": "Open Tuya Desk"
+  }
+}

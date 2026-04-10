@@ -1,3 +1,5 @@
+export type UiLocale = "system" | "en" | "es";
+
 export interface AppConfig {
   clientId: string;
   clientSecret: string;
@@ -27,6 +29,7 @@ export interface ChannelAlias {
 export interface UiPreferences {
   viewMode: "user" | "developer";
   deviceOrder: string[];
+  locale: UiLocale;
 }
 
 export interface TuyaFunction {
@@ -173,4 +176,5 @@ export const DEFAULT_CONFIG: AppConfig = {
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   viewMode: "user",
   deviceOrder: [],
+  locale: "system",
 };

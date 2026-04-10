@@ -1,26 +1,28 @@
 import type {
   ActionLogEntry,
-  ConnectionStatus,
   Device,
   DeviceChannel,
+  UiLocale,
 } from "./models";
+import {
+  localizeChannelName,
+  localizeConnectionState,
+  resolveLocale,
+  t,
+} from "./i18n";
 
-export function formatConnectionState(state: ConnectionStatus["state"]): string {
-  switch (state) {
-    case "connected":
-      return "Connected";
-    case "error":
-      return "Error";
-    case "needs_config":
-    default:
-      return "Setup";
-  }
+export function formatConnectionState(
+  state: "needs_config" | "connected" | "error",
+  localePreference: UiLocale,
+): string {
+  return localizeConnectionState(resolveLocale(localePreference), state);
 }
 
-export function formatDeviceSubtitle(device: Device): string {
+export function formatDeviceSubtitle(device: Device, localePreference: UiLocale): string {
+  const locale = resolveLocale(localePreference);
   const parts = [device.inferredType];
   if (device.category) {
-    parts.push(`Category ${device.category}`);
+    parts.push(t(locale, "category", { value: device.category }));
   }
   return parts.join(" - ");
 }
@@ -33,15 +35,9 @@ export function formatActionTime(entry: ActionLogEntry): string {
   }).format(entry.timestampMs);
 }
 
-export function buildDefaultChannelName(channel: DeviceChannel): string {
-  if (channel.code === "switch") {
-    return "Main";
-  }
-  if (channel.code === "switch_led") {
-    return "Backlight";
-  }
-  if (channel.code.startsWith("switch_")) {
-    return `Switch ${channel.index}`;
-  }
-  return channel.displayName;
+export function buildDefaultChannelName(
+  channel: DeviceChannel,
+  localePreference: UiLocale,
+): string {
+  return localizeChannelName(resolveLocale(localePreference), channel);
 }

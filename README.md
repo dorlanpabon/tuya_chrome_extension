@@ -35,6 +35,7 @@ Ruta local:
 - Control ON/OFF por canal
 - Modo `User` compacto
 - Modo `Developer` con alias, ids y log local
+- Interfaz bilingue con `English` y `Spanish`
 - Orden manual de dispositivos guardado en `chrome.storage.sync`
 
 ## Obtener Access ID y Access Secret
@@ -120,4 +121,5 @@ npm run package:webstore
   - `store-assets/chrome-web-store`
 - Documentacion para publicar:
   - `docs/chrome-web-store.md`
+  - `docs/chrome-web-store-submission-es.md`
   - `docs/privacy-policy.md`

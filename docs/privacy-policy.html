@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tuya Desk Privacy Policy</title>
+    <meta name="description" content="Privacy policy for the Tuya Desk Chrome extension." />
+    <link rel="stylesheet" href="./pages.css" />
+  </head>
+  <body>
+    <main class="shell shell--narrow">
+      <a class="back-link" href="./index.html">Back to Tuya Desk</a>
+
+      <section class="hero hero--document">
+        <div class="hero__eyebrow">Privacy Policy</div>
+        <h1>Tuya Desk Privacy Policy</h1>
+        <p>Last updated: 2026-04-10</p>
+      </section>
+
+      <section class="card card--document">
+        <h2>Overview</h2>
+        <p>
+          Tuya Desk is a Chrome extension that lets users control Tuya light switches and other
+          supported Tuya switch channels from a compact popup.
+        </p>
+        <p>
+          This extension does not sell data, does not run advertising and does not include
+          analytics trackers.
+        </p>
+
+        <h2>Data We Process</h2>
+        <ul>
+          <li>Tuya Access ID</li>
+          <li>Tuya Access Secret</li>
+          <li>Tuya base URL and region label</li>
+          <li>Tuya device IDs and channel codes</li>
+          <li>Local aliases for devices and channels</li>
+          <li>Cached device state</li>
+          <li>Local action log entries</li>
+        </ul>
+
+        <h2>Why We Process This Data</h2>
+        <ul>
+          <li>Authenticate against Tuya Cloud.</li>
+          <li>Load the user's linked devices.</li>
+          <li>Send on and off commands to device channels.</li>
+          <li>Remember UI preferences, selected language and device order.</li>
+          <li>Make the popup open faster by caching the latest known device state.</li>
+        </ul>
+
+        <h2>Where Data Is Stored</h2>
+        <ul>
+          <li><code>chrome.storage.sync</code> for credentials, aliases and UI preferences.</li>
+          <li><code>chrome.storage.local</code> for cached device state and local action log.</li>
+        </ul>
+
+        <h2>Network Usage</h2>
+        <p>
+          The extension sends requests only to Tuya Cloud HTTPS endpoints needed to authenticate and
+          control the user's devices.
+        </p>
+        <p>
+          The extension does not scrape websites, does not inject ads and does not collect unrelated
+          browsing data.
+        </p>
+
+        <h2>Data Sharing</h2>
+        <p>We do not sell or rent user data.</p>
+        <p>We do not share data with third-party advertisers or analytics vendors.</p>
+        <p>
+          Data is only sent to Tuya Cloud when required for the extension feature set requested by
+          the user.
+        </p>
+
+        <h2>Data Retention</h2>
+        <p>Stored data remains in the user's browser profile until the user:</p>
+        <ul>
+          <li>changes or removes the saved configuration,</li>
+          <li>clears the extension storage, or</li>
+          <li>uninstalls the extension.</li>
+        </ul>
+
+        <h2>Security Note</h2>
+        <p>
+          Tuya credentials are stored in Chrome extension storage so they can be reused across the
+          user's synced Chrome profile. If stronger protection is needed, the next hardening step is
+          encrypting the secret before storing it in sync storage.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          For support or privacy questions, publish a maintainer contact email on the Chrome Web
+          Store listing before submitting the extension.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

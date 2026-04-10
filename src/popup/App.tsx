@@ -8,6 +8,7 @@ import {
   formatConnectionState,
   formatDeviceSubtitle,
 } from "../shared/format";
+import { resolveLocale, t, type ResolvedLocale } from "../shared/i18n";
 import type {
   ActionLogEntry,
   AppConfig,
@@ -86,6 +87,10 @@ export function App() {
   const showConfigPanel =
     !state.bootstrapping &&
     (showSetup || state.settingsOpen || state.uiPreferences.viewMode === "developer");
+  const locale = useMemo<ResolvedLocale>(
+    () => resolveLocale(state.uiPreferences.locale),
+    [state.uiPreferences.locale],
+  );
   const orderedDevices = useMemo(
     () => orderDevices(state.devices, state.uiPreferences.deviceOrder),
     [state.devices, state.uiPreferences.deviceOrder],
@@ -138,8 +143,8 @@ export function App() {
           ? {
               state: "connected",
               message: hasCachedDevices
-                ? "Showing cached state while checking Tuya Cloud."
-                : "Connecting to Tuya Cloud...",
+                ? t(locale, "cachedCheckingMessage")
+                : t(locale, "connectingCloudMessage"),
               lastCheckedAt: payload.connection.lastCheckedAt,
             }
           : payload.connection,
@@ -193,8 +198,8 @@ export function App() {
               state: "connected",
               message:
                 current.devices.length > 0
-                  ? "Showing cached state while checking Tuya Cloud."
-                  : "Loading devices from Tuya Cloud...",
+                  ? t(locale, "cachedCheckingMessage")
+                  : t(locale, "loadingCloudMessage"),
               lastCheckedAt: current.connection.lastCheckedAt ?? null,
             }
           : current.connection,
@@ -209,7 +214,7 @@ export function App() {
         devices,
         connection: {
           state: "connected",
-          message: silent ? "Live state synced." : "Devices refreshed from Tuya Cloud.",
+          message: silent ? t(locale, "liveSyncedMessage") : t(locale, "refreshedMessage"),
           lastCheckedAt: Date.now(),
         },
       }));
@@ -222,7 +227,7 @@ export function App() {
           state: "error",
           message:
             silent && current.devices.length > 0
-              ? "Unable to refresh live state. Showing cached devices."
+              ? t(locale, "cachedFallbackMessage")
               : toMessage(error),
           lastCheckedAt: Date.now(),
         },
@@ -243,11 +248,11 @@ export function App() {
         testingConnection: false,
         connection: {
           state: "connected",
-          message: `${result.message} ${result.deviceCount} device(s) visible.`,
+          message: t(locale, "connectionSuccess", { count: result.deviceCount }),
           lastCheckedAt: Date.now(),
         },
       }));
-      pushToast("success", `Connection successful. ${result.deviceCount} device(s) visible.`);
+      pushToast("success", t(locale, "connectionSuccess", { count: result.deviceCount }));
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -272,7 +277,7 @@ export function App() {
         hasConfig: true,
         settingsOpen: false,
       }));
-      pushToast("success", "Configuration synced with Chrome.");
+      pushToast("success", t(locale, "configSyncedToast"));
       await refreshDevices();
     } catch (error) {
       setState((current) => ({ ...current, savingConfig: false }));
@@ -293,6 +298,29 @@ export function App() {
     try {
       await extensionApi.saveUiPreferences(nextPreferences);
     } catch (error) {
+      pushToast("error", toMessage(error));
+    }
+  }
+
+  async function setLocalePreference(localePreference: UiPreferences["locale"]) {
+    const previousPreferences = state.uiPreferences;
+    const nextPreferences = {
+      ...state.uiPreferences,
+      locale: localePreference,
+    };
+
+    setState((current) => ({
+      ...current,
+      uiPreferences: nextPreferences,
+    }));
+
+    try {
+      await extensionApi.saveUiPreferences(nextPreferences);
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        uiPreferences: previousPreferences,
+      }));
       pushToast("error", toMessage(error));
     }
   }
@@ -393,7 +421,7 @@ export function App() {
             : device,
         ),
       }));
-      pushToast("success", "Device alias saved.");
+      pushToast("success", t(locale, "deviceAliasSaved"));
     } catch (error) {
       pushToast("error", toMessage(error));
     }
@@ -413,7 +441,8 @@ export function App() {
                     ? {
                         ...channel,
                         alias: alias.trim() || null,
-                        displayName: alias.trim() || buildDefaultChannelName(channel),
+                        displayName:
+                          alias.trim() || buildDefaultChannelName(channel, state.uiPreferences.locale),
                       }
                     : channel,
                 ),
@@ -421,7 +450,7 @@ export function App() {
             : device,
         ),
       }));
-      pushToast("success", "Channel alias saved.");
+      pushToast("success", t(locale, "channelAliasSaved"));
     } catch (error) {
       pushToast("error", toMessage(error));
     }
@@ -459,8 +488,8 @@ export function App() {
           <div class="brand">
             <div class="brand__mark">{renderSwitchIcon()}</div>
             <div>
-              <p class="eyebrow">Chrome sync</p>
-              <h1>Tuya Desk</h1>
+              <p class="eyebrow">{t(locale, "chromeSync")}</p>
+              <h1>{t(locale, "appTitle")}</h1>
             </div>
           </div>
 
@@ -470,13 +499,13 @@ export function App() {
                 class={state.uiPreferences.viewMode === "user" ? "is-active" : ""}
                 onClick={() => void setViewMode("user")}
               >
-                User
+                {t(locale, "viewUser")}
               </button>
               <button
                 class={state.uiPreferences.viewMode === "developer" ? "is-active" : ""}
                 onClick={() => void setViewMode("developer")}
               >
-                Dev
+                {t(locale, "viewDeveloper")}
               </button>
             </div>
             <button
@@ -489,7 +518,7 @@ export function App() {
                   orderEditorOpen: false,
                 }))
               }
-              title="Configuration"
+              title={t(locale, "configTitle")}
             >
               {renderSettingsIcon()}
             </button>
@@ -503,11 +532,16 @@ export function App() {
                   orderEditorOpen: !current.orderEditorOpen,
                 }))
               }
-              title="Organize devices"
+              title={t(locale, "organizeDevices")}
             >
               {renderSortIcon()}
             </button>
-            <button class="icon-button" disabled={state.refreshing} onClick={() => void refreshDevices()}>
+            <button
+              class="icon-button"
+              disabled={state.refreshing}
+              onClick={() => void refreshDevices()}
+              title={t(locale, "refreshDevices")}
+            >
               {renderRefreshIcon()}
             </button>
           </div>
@@ -516,7 +550,7 @@ export function App() {
         <div class="topbar__row topbar__row--lower">
           <div class={`connection-pill connection-pill--${state.connection.state}`}>
             <span class="connection-pill__dot" />
-            <span>{formatConnectionState(state.connection.state)}</span>
+            <span>{formatConnectionState(state.connection.state, state.uiPreferences.locale)}</span>
           </div>
 
           <label class="search">
@@ -529,7 +563,7 @@ export function App() {
                   searchQuery: (event.currentTarget as HTMLInputElement).value,
                 }))
               }
-              placeholder="Search"
+              placeholder={t(locale, "searchPlaceholder")}
             />
           </label>
 
@@ -544,7 +578,11 @@ export function App() {
                   }))
                 }
               >
-                {filter === "all" ? "All" : filter === "online" ? "On" : "Off"}
+                {filter === "all"
+                  ? t(locale, "filterAll")
+                  : filter === "online"
+                    ? t(locale, "filterOnline")
+                    : t(locale, "filterOffline")}
               </button>
             ))}
           </div>
@@ -556,8 +594,8 @@ export function App() {
           <span class="sync-banner__dot" />
           <p>
             {state.refreshing
-              ? "Checking latest device state in Tuya Cloud..."
-              : "Showing cached device state."}
+              ? t(locale, "syncChecking")
+              : t(locale, "syncCached")}
           </p>
         </section>
       )}
@@ -566,8 +604,8 @@ export function App() {
         <section class="panel order-panel">
           <div class="panel__header">
             <div>
-              <h2>Device order</h2>
-              <p>Move devices and the order is saved to Chrome sync.</p>
+              <h2>{t(locale, "deviceOrderTitle")}</h2>
+              <p>{t(locale, "deviceOrderCopy")}</p>
             </div>
             <button
               class="icon-button"
@@ -577,7 +615,7 @@ export function App() {
                   orderEditorOpen: false,
                 }))
               }
-              title="Close ordering"
+              title={t(locale, "close")}
             >
               {renderCloseIcon()}
             </button>
@@ -587,14 +625,14 @@ export function App() {
               <div class="order-item" key={`order-${device.id}`}>
                 <div class="order-item__copy">
                   <strong>{device.name}</strong>
-                  <p>{device.gangCount} ch</p>
+                  <p>{device.gangCount} {t(locale, "channelShort")}</p>
                 </div>
                 <div class="order-item__actions">
                   <button
                     class="icon-button"
                     disabled={index === 0}
                     onClick={() => void moveDevice(device.id, -1)}
-                    title="Move up"
+                    title={t(locale, "moveUp")}
                   >
                     {renderArrowUpIcon()}
                   </button>
@@ -602,7 +640,7 @@ export function App() {
                     class="icon-button"
                     disabled={index === orderedDevices.length - 1}
                     onClick={() => void moveDevice(device.id, 1)}
-                    title="Move down"
+                    title={t(locale, "moveDown")}
                   >
                     {renderArrowDownIcon()}
                   </button>
@@ -617,31 +655,31 @@ export function App() {
         <section class="panel">
           <div class="panel__header">
             <div>
-              <h2>{showSetup ? "First setup" : "Configuration"}</h2>
+              <h2>{showSetup ? t(locale, "setupTitle") : t(locale, "configTitle")}</h2>
               <p>
                 {showSetup
-                  ? "Add your Tuya Cloud credentials to start loading devices."
-                  : "Saved in chrome sync so it follows your signed-in browser."}
+                  ? t(locale, "setupDescription")
+                  : t(locale, "configDescription")}
               </p>
             </div>
-            <span class="sync-pill">{state.hasConfig ? "Synced" : "Not configured"}</span>
+            <span class="sync-pill">{state.hasConfig ? t(locale, "synced") : t(locale, "notConfigured")}</span>
           </div>
           {showSetup && (
             <div class="setup-links">
               <a class="button button--link" href={TUYA_PLATFORM_URL} target="_blank" rel="noreferrer">
-                Open Tuya Platform
+                {t(locale, "openTuyaPlatform")}
               </a>
               <a class="button button--link" href={TUYA_KEYS_DOCS_URL} target="_blank" rel="noreferrer">
-                How to get Access ID / Secret
+                {t(locale, "howToGetKeys")}
               </a>
               <a class="button button--link" href={TUYA_LINK_DEVICES_URL} target="_blank" rel="noreferrer">
-                How to link devices
+                {t(locale, "howToLinkDevices")}
               </a>
             </div>
           )}
           <div class="form-grid">
             <label>
-              <span>Client ID</span>
+              <span>{t(locale, "clientId")}</span>
               <input
                 value={state.configDraft.clientId}
                 onInput={(event) =>
@@ -650,7 +688,7 @@ export function App() {
               />
             </label>
             <label>
-              <span>Client Secret</span>
+              <span>{t(locale, "clientSecret")}</span>
               <input
                 type="password"
                 value={state.configDraft.clientSecret}
@@ -660,7 +698,7 @@ export function App() {
               />
             </label>
             <label>
-              <span>Base URL</span>
+              <span>{t(locale, "baseUrl")}</span>
               <input
                 value={state.configDraft.baseUrl}
                 onInput={(event) =>
@@ -669,13 +707,31 @@ export function App() {
               />
             </label>
             <label>
-              <span>Region</span>
+              <span>{t(locale, "region")}</span>
               <input
                 value={state.configDraft.regionLabel}
                 onInput={(event) =>
                   updateConfig("regionLabel", (event.currentTarget as HTMLInputElement).value)
                 }
               />
+            </label>
+            <label>
+              <span>{t(locale, "language")}</span>
+              <div class="segmented segmented--field">
+                {(["system", "es", "en"] as const).map((localeOption) => (
+                  <button
+                    type="button"
+                    class={state.uiPreferences.locale === localeOption ? "is-active" : ""}
+                    onClick={() => void setLocalePreference(localeOption)}
+                  >
+                    {localeOption === "system"
+                      ? t(locale, "languageSystem")
+                      : localeOption === "es"
+                        ? t(locale, "languageSpanish")
+                        : t(locale, "languageEnglish")}
+                  </button>
+                ))}
+              </div>
             </label>
           </div>
           <div class="panel__actions">
@@ -684,14 +740,14 @@ export function App() {
               disabled={state.testingConnection}
               onClick={() => void testConnection()}
             >
-              {state.testingConnection ? "Testing..." : "Test connection"}
+              {state.testingConnection ? t(locale, "testing") : t(locale, "testConnection")}
             </button>
             <button
               class="button button--primary"
               disabled={state.savingConfig}
               onClick={() => void persistConfig()}
             >
-              {state.savingConfig ? "Saving..." : "Save sync config"}
+              {state.savingConfig ? t(locale, "saving") : t(locale, "saveSyncConfig")}
             </button>
           </div>
         </section>
@@ -699,22 +755,18 @@ export function App() {
 
       {state.bootstrapping ? (
         <section class="empty-state">
-          <strong>Loading extension...</strong>
-          <p>Preparing synced config and cached Tuya devices.</p>
+          <strong>{t(locale, "loadingExtension")}</strong>
+          <p>{t(locale, "loadingExtensionCopy")}</p>
         </section>
       ) : showSetup ? (
         <section class="empty-state">
-          <strong>Configure Tuya Cloud first</strong>
-          <p>
-            Open the Tuya Developer Platform, copy the Access ID and Access Secret from your cloud
-            project Overview page, link your Tuya or Smart Life account to the project, and then
-            save the credentials here.
-          </p>
+          <strong>{t(locale, "configureFirst")}</strong>
+          <p>{t(locale, "configureFirstCopy")}</p>
         </section>
       ) : visibleDevices.length === 0 ? (
         <section class="empty-state">
-          <strong>No devices</strong>
-          <p>{state.refreshing ? "Refreshing devices from Tuya Cloud..." : "No devices match the current view."}</p>
+          <strong>{t(locale, "noDevices")}</strong>
+          <p>{state.refreshing ? t(locale, "refreshingDevices") : t(locale, "noDevicesMatch")}</p>
         </section>
       ) : (
         <section class={`device-grid device-grid--${state.uiPreferences.viewMode}`}>
@@ -726,11 +778,11 @@ export function App() {
                     <div class="device-card__icon">{renderSwitchIcon()}</div>
                     <div>
                       <h3>{device.name}</h3>
-                      <p>{device.gangCount} ch</p>
+                      <p>{device.gangCount} {t(locale, "channelShort")}</p>
                     </div>
                   </div>
                   <span class={`status-chip ${device.online ? "is-online" : "is-offline"}`}>
-                    {device.online ? "Online" : "Offline"}
+                    {device.online ? t(locale, "online") : t(locale, "offline")}
                   </span>
                 </div>
 
@@ -740,6 +792,8 @@ export function App() {
                     const isBusy = Boolean(state.busyChannels[busyKey]);
                     const active = channel.currentState === true;
                     const unknown = channel.currentState === null;
+                    const channelLabel =
+                      channel.alias?.trim() || buildDefaultChannelName(channel, state.uiPreferences.locale);
                     return (
                       <button
                         key={channel.code}
@@ -748,9 +802,15 @@ export function App() {
                         onClick={() => void handleToggle(device.id, channel.code, !active)}
                       >
                         <span class="channel-tile__icon">{renderBulbIcon(active)}</span>
-                        <span class="channel-tile__label">{channel.displayName}</span>
+                        <span class="channel-tile__label">{channelLabel}</span>
                         <span class="channel-tile__state">
-                          {isBusy ? "..." : unknown ? "?" : active ? "ON" : "OFF"}
+                          {isBusy
+                            ? "..."
+                            : unknown
+                              ? t(locale, "unknown")
+                              : active
+                                ? t(locale, "on")
+                                : t(locale, "off")}
                         </span>
                       </button>
                     );
@@ -762,17 +822,17 @@ export function App() {
                 <div class="device-card__head">
                   <div>
                     <h3>{device.name}</h3>
-                    <p>{formatDeviceSubtitle(device)}</p>
+                    <p>{formatDeviceSubtitle(device, state.uiPreferences.locale)}</p>
                   </div>
                   <span class={`status-chip ${device.online ? "is-online" : "is-offline"}`}>
-                    {device.online ? "Online" : "Offline"}
+                    {device.online ? t(locale, "online") : t(locale, "offline")}
                   </span>
                 </div>
 
                 <div class="meta-grid">
-                  <span><strong>ID</strong> {device.id}</span>
-                  <span><strong>Channels</strong> {device.gangCount}</span>
-                  <span><strong>Product</strong> {device.productId ?? "n/a"}</span>
+                  <span><strong>{t(locale, "deviceId")}</strong> {device.id}</span>
+                  <span><strong>{t(locale, "channels")}</strong> {device.gangCount}</span>
+                  <span><strong>{t(locale, "product")}</strong> {device.productId ?? t(locale, "notAvailable")}</span>
                 </div>
 
                 <div class="developer-channels">
@@ -781,13 +841,15 @@ export function App() {
                     const isBusy = Boolean(state.busyChannels[busyKey]);
                     const active = channel.currentState === true;
                     const unknown = channel.currentState === null;
+                    const channelLabel =
+                      channel.alias?.trim() || buildDefaultChannelName(channel, state.uiPreferences.locale);
                     return (
                       <section class="channel-row" key={channel.code}>
                         <div class="channel-row__copy">
                           <span class="channel-row__glyph">{renderPowerIcon(active)}</span>
                           <div>
-                            <strong>{channel.displayName}</strong>
-                            <p>{channel.code}{channel.controllable ? "" : " - read only"}</p>
+                            <strong>{channelLabel}</strong>
+                            <p>{channel.code}{channel.controllable ? "" : ` - ${t(locale, "readOnly")}`}</p>
                           </div>
                         </div>
                         <button
@@ -795,7 +857,13 @@ export function App() {
                           disabled={isBusy || !device.online || !channel.controllable}
                           onClick={() => void handleToggle(device.id, channel.code, !active)}
                         >
-                          {isBusy ? "Sending..." : unknown ? "Set" : active ? "Turn off" : "Turn on"}
+                          {isBusy
+                            ? t(locale, "sending")
+                            : unknown
+                              ? t(locale, "set")
+                              : active
+                                ? t(locale, "turnOff")
+                                : t(locale, "turnOn")}
                         </button>
                       </section>
                     );
@@ -804,9 +872,10 @@ export function App() {
 
                 <div class="alias-box">
                   <AliasForm
-                    label="Device alias"
+                    label={t(locale, "deviceAlias")}
                     value={device.metadata?.alias ?? ""}
                     onSave={(value) => handleDeviceAlias(device.id, value)}
+                    locale={locale}
                   />
                   {device.channels.map((channel) => (
                     <AliasForm
@@ -814,6 +883,7 @@ export function App() {
                       label={channel.code}
                       value={channel.alias ?? ""}
                       onSave={(value) => handleChannelAlias(device.id, channel.code, value)}
+                      locale={locale}
                     />
                   ))}
                 </div>
@@ -827,8 +897,8 @@ export function App() {
         <section class="panel">
           <div class="panel__header">
             <div>
-              <h2>Recent actions</h2>
-              <p>Local developer log.</p>
+              <h2>{t(locale, "recentActions")}</h2>
+              <p>{t(locale, "localDeveloperLog")}</p>
             </div>
           </div>
           <div class="action-log">
@@ -863,6 +933,7 @@ function AliasForm(props: {
   label: string;
   value: string;
   onSave: (value: string) => void | Promise<void>;
+  locale: ResolvedLocale;
 }) {
   const [value, setValue] = useState(props.value);
 
@@ -884,10 +955,10 @@ function AliasForm(props: {
           <input
             value={value}
             onInput={(event) => setValue((event.currentTarget as HTMLInputElement).value)}
-            placeholder="Optional alias"
+            placeholder={t(props.locale, "optionalAlias")}
           />
           <button class="button button--secondary" type="submit">
-            Save
+            {t(props.locale, "save")}
           </button>
         </div>
       </label>
