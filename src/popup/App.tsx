@@ -21,6 +21,12 @@ import { DEFAULT_CONFIG, DEFAULT_UI_PREFERENCES } from "../shared/models";
 type StatusFilter = "all" | "online" | "offline";
 type ToastTone = "success" | "error" | "info";
 
+const TUYA_PLATFORM_URL = "https://platform.tuya.com/";
+const TUYA_KEYS_DOCS_URL =
+  "https://developer.tuya.com/en/docs/iot/device-control-best-practice-nodejs?_source=751e806efb9d0a8cb3793945cccdc47e&id=Kaunfr776vomb";
+const TUYA_LINK_DEVICES_URL =
+  "https://developer.tuya.com/en/docs/iot/link-devices?_source=0d3f09cd9c61de21759f60ac3a058d51&id=Ka471nu1sfmkl";
+
 interface Toast {
   id: string;
   tone: ToastTone;
@@ -66,6 +72,8 @@ const INITIAL_STATE: AppState = {
 
 export function App() {
   const [state, setState] = useState(INITIAL_STATE);
+  const showSetup = !state.hasConfig;
+  const showConfigPanel = showSetup || state.uiPreferences.viewMode === "developer";
 
   const visibleDevices = useMemo(
     () => filterDevices(state.devices, state.searchQuery, state.statusFilter),
@@ -385,15 +393,32 @@ export function App() {
         </div>
       </header>
 
-      {state.uiPreferences.viewMode === "developer" && (
+      {showConfigPanel && (
         <section class="panel">
           <div class="panel__header">
             <div>
-              <h2>Configuration</h2>
-              <p>Saved in chrome sync so it follows your signed-in browser.</p>
+              <h2>{showSetup ? "First setup" : "Configuration"}</h2>
+              <p>
+                {showSetup
+                  ? "Add your Tuya Cloud credentials to start loading devices."
+                  : "Saved in chrome sync so it follows your signed-in browser."}
+              </p>
             </div>
             <span class="sync-pill">{state.hasConfig ? "Synced" : "Not configured"}</span>
           </div>
+          {showSetup && (
+            <div class="setup-links">
+              <a class="button button--link" href={TUYA_PLATFORM_URL} target="_blank" rel="noreferrer">
+                Open Tuya Platform
+              </a>
+              <a class="button button--link" href={TUYA_KEYS_DOCS_URL} target="_blank" rel="noreferrer">
+                How to get Access ID / Secret
+              </a>
+              <a class="button button--link" href={TUYA_LINK_DEVICES_URL} target="_blank" rel="noreferrer">
+                How to link devices
+              </a>
+            </div>
+          )}
           <div class="form-grid">
             <label>
               <span>Client ID</span>
@@ -457,10 +482,14 @@ export function App() {
           <strong>Loading extension...</strong>
           <p>Preparing synced config and cached Tuya devices.</p>
         </section>
-      ) : !state.hasConfig && state.uiPreferences.viewMode === "user" ? (
+      ) : showSetup ? (
         <section class="empty-state">
-          <strong>Setup required</strong>
-          <p>Switch to Dev mode, save your Tuya credentials, then refresh.</p>
+          <strong>Configure Tuya Cloud first</strong>
+          <p>
+            Open the Tuya Developer Platform, copy the Access ID and Access Secret from your cloud
+            project Overview page, link your Tuya or Smart Life account to the project, and then
+            save the credentials here.
+          </p>
         </section>
       ) : visibleDevices.length === 0 ? (
         <section class="empty-state">

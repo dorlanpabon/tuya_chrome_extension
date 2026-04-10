@@ -36,6 +36,29 @@ Ruta local:
 - Modo `User` compacto
 - Modo `Developer` con alias, ids y log local
 
+## Obtener Access ID y Access Secret
+
+Pasos recomendados en Tuya Developer Platform:
+
+1. Entra a [Tuya Developer Platform](https://platform.tuya.com/).
+2. Crea o abre tu cloud project en `Cloud > Development`.
+3. Abre la pestana `Overview`.
+4. Copia la `Access ID` y la `Access Secret` desde la seccion `Cloud Application Authorization Key`.
+5. Si tus dispositivos no aparecen, vincula tu app Tuya Smart o Smart Life al proyecto y luego enlaza los dispositivos al cloud project.
+
+Guias oficiales:
+
+- [Cloud development overview](https://developer.tuya.com/en/docs/cloud)
+- [How to get Access ID / Access Secret](https://developer.tuya.com/en/docs/iot/device-control-best-practice-nodejs?_source=751e806efb9d0a8cb3793945cccdc47e&id=Kaunfr776vomb)
+- [Link devices to your cloud project](https://developer.tuya.com/en/docs/iot/link-devices?_source=0d3f09cd9c61de21759f60ac3a058d51&id=Ka471nu1sfmkl)
+
+Datos que normalmente pondras en la extension:
+
+- `Client ID`: tu `Access ID`
+- `Client Secret`: tu `Access Secret`
+- `Base URL`: por ejemplo `https://openapi.tuyaus.com` para Western America
+- `Region`: una etiqueta descriptiva, por ejemplo `Western America Data Center`
+
 ## Seguridad
 
 La configuracion se guarda en `chrome.storage.sync` para que viaje con tu Chrome. Eso mejora portabilidad, pero implica que el secreto queda sincronizado en tu cuenta de navegador.

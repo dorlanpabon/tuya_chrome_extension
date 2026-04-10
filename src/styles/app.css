@@ -290,6 +290,11 @@ h3 {
   color: var(--accent);
 }
 
+.button--link {
+  text-decoration: none;
+  justify-content: center;
+}
+
 .button--danger {
   color: var(--danger);
 }
@@ -392,7 +397,8 @@ h3 {
 .developer-channels,
 .alias-box,
 .action-log,
-.form-grid {
+.form-grid,
+.setup-links {
   display: grid;
   gap: 8px;
 }
