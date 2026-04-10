@@ -1,68 +1,62 @@
 # Tuya Desk Chrome Extension
 
-Extension Chrome MV3 para controlar switches Tuya/Tuya Smart por canal, con configuracion sincronizada por `chrome.storage.sync`.
+[![Release](https://img.shields.io/github/v/release/dorlanpabon/tuya_chrome_extension)](https://github.com/dorlanpabon/tuya_chrome_extension/releases)
+[![License](https://img.shields.io/github/license/dorlanpabon/tuya_chrome_extension)](https://github.com/dorlanpabon/tuya_chrome_extension/blob/main/LICENSE)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4)](https://developer.chrome.com/docs/extensions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)](https://www.typescriptlang.org/)
 
-## Por que va en otra carpeta
+Compact Chrome extension for controlling Tuya and Tuya Smart wall switches by channel.
 
-Este proyecto vive separado del repo Tauri para no mezclar:
+This project is the browser companion to the desktop app. It focuses on a fast popup UX, synced setup across Chrome profiles, and explicit channel control for multi-gang switches.
 
-- app de escritorio
-- extension del navegador
-- pipelines y empaquetado distintos
+## Highlights
 
-Ruta local:
+- Official Tuya Cloud integration
+- Compact popup for everyday switch control
+- Explicit support for `switch`, `switch_led`, and `switch_1` to `switch_4`
+- Separate `User` and `Developer` modes
+- Local aliases, device ordering, and compact UI preferences
+- Bilingual UI with `English` and `Spanish`
+- Chrome Web Store-ready package, assets, and privacy policy
 
-- `D:\xampp\htdocs\tuya_chrome_extension`
+## Screenshots
 
-## Stack
+User mode:
 
-- Chrome Extension Manifest V3
-- Vite
-- Preact
-- TypeScript
-- Background service worker para Tuya Cloud
+![User mode screenshot](./store-assets/chrome-web-store/screenshot-1-user.png)
 
-## Features del MVP
+Developer mode:
 
-- Configurar `TUYA_CLIENT_ID`
-- Configurar `TUYA_CLIENT_SECRET`
-- Configurar `TUYA_BASE_URL`
-- Validar `TUYA_BASE_URL` contra endpoints oficiales soportados de Tuya Cloud
-- Guardar configuracion en `chrome.storage.sync`
-- Reusar esa configuracion al cambiar de PC si Chrome sincroniza extensiones y storage
-- Probar conexion
-- Listar dispositivos
-- Detectar `switch`, `switch_led`, `switch_1` a `switch_4`
-- Control ON/OFF por canal
-- Modo `User` compacto
-- Modo `Developer` con alias, ids y log local
-- Interfaz bilingue con `English` y `Spanish`
-- Orden manual de dispositivos guardado en `chrome.storage.sync`
+![Developer mode screenshot](./store-assets/chrome-web-store/screenshot-2-developer.png)
 
-## Obtener Access ID y Access Secret
+## Why this extension exists
 
-Pasos recomendados en Tuya Developer Platform:
+The main desktop app is useful when you want a dedicated controller window, but there are cases where a browser popup is a better fit:
 
-1. Entra a [Tuya Developer Platform](https://platform.tuya.com/).
-2. Crea o abre tu cloud project en `Cloud > Development`.
-3. Abre la pestana `Overview`.
-4. Copia la `Access ID` y la `Access Secret` desde la seccion `Cloud Application Authorization Key`.
-5. Si tus dispositivos no aparecen, vincula tu app Tuya Smart o Smart Life al proyecto y luego enlaza los dispositivos al cloud project.
+- quick access without opening a full desktop window
+- synced setup across Chrome on multiple machines
+- compact control from a toolbar popup
+- faster iteration for browser-centric workflows
 
-Guias oficiales:
+## Features
 
-- [Cloud development overview](https://developer.tuya.com/en/docs/cloud)
-- [How to get Access ID / Access Secret](https://developer.tuya.com/en/docs/iot/device-control-best-practice-nodejs?_source=751e806efb9d0a8cb3793945cccdc47e&id=Kaunfr776vomb)
-- [Link devices to your cloud project](https://developer.tuya.com/en/docs/iot/link-devices?_source=0d3f09cd9c61de21759f60ac3a058d51&id=Ka471nu1sfmkl)
+- Save `TUYA_CLIENT_ID`
+- Save `TUYA_CLIENT_SECRET`
+- Save `TUYA_BASE_URL`
+- Validate `TUYA_BASE_URL` against supported official Tuya OpenAPI hosts
+- Store configuration in `chrome.storage.sync`
+- Reuse synced setup across Chrome installations
+- Test Tuya Cloud connectivity
+- List linked devices
+- Detect multi-gang channels automatically
+- Toggle each channel independently
+- Refresh real state without blocking the popup UI
+- Save local device aliases and channel aliases
+- Save manual device order
 
-Datos que normalmente pondras en la extension:
+## Supported Tuya hosts
 
-- `Client ID`: tu `Access ID`
-- `Client Secret`: tu `Access Secret`
-- `Base URL`: por ejemplo `https://openapi.tuyaus.com` para Western America
-- `Region`: una etiqueta descriptiva, por ejemplo `Western America Data Center`
-
-Hosts oficiales soportados en esta build:
+This build intentionally limits host access to official Tuya OpenAPI domains:
 
 - `https://openapi.tuyaus.com`
 - `https://openapi-ueaz.tuyaus.com`
@@ -71,67 +65,117 @@ Hosts oficiales soportados en esta build:
 - `https://openapi.tuyacn.com`
 - `https://openapi.tuyain.com`
 
-La extension rechaza `baseUrl` fuera de esa lista para reducir permisos de host y simplificar la revision en Chrome Web Store.
+That keeps the extension aligned with Chrome Web Store review expectations and avoids broad host permissions.
 
-## Seguridad
+## Getting Tuya credentials
 
-La configuracion se guarda en `chrome.storage.sync` para que viaje con tu Chrome. Eso mejora portabilidad, pero implica que el secreto queda sincronizado en tu cuenta de navegador.
+Recommended steps in Tuya Developer Platform:
 
-Si luego quieres endurecer esto, el siguiente paso correcto es:
+1. Open [Tuya Developer Platform](https://platform.tuya.com/).
+2. Create or open your cloud project in `Cloud > Development`.
+3. Open the `Overview` tab.
+4. Copy `Access ID` and `Access Secret` from `Cloud Application Authorization Key`.
+5. Link your Tuya Smart or Smart Life app to the cloud project if the devices are not showing up yet.
 
-- cifrar `clientSecret` con una passphrase
-- guardar solo el blob cifrado en sync
-- desbloquearlo por sesion en la extension
+Official references:
 
-## Scripts
+- [Cloud development overview](https://developer.tuya.com/en/docs/cloud)
+- [How to get Access ID / Access Secret](https://developer.tuya.com/en/docs/iot/device-control-best-practice-nodejs?_source=751e806efb9d0a8cb3793945cccdc47e&id=Kaunfr776vomb)
+- [Link devices to your cloud project](https://developer.tuya.com/en/docs/iot/link-devices?_source=0d3f09cd9c61de21759f60ac3a058d51&id=Ka471nu1sfmkl)
+
+Typical values:
+
+- `Client ID`: your Tuya `Access ID`
+- `Client Secret`: your Tuya `Access Secret`
+- `Base URL`: for example `https://openapi.tuyaus.com`
+- `Region`: for example `Western America Data Center`
+
+## Stack
+
+- `Chrome Extension Manifest V3`
+- `Vite`
+- `Preact`
+- `TypeScript`
+- background service worker for Tuya Cloud communication
+
+## Local development
 
 ```bash
 npm install
 npm run build
+```
+
+Build the Chrome Web Store package:
+
+```bash
 npm run package:webstore
 ```
 
-## Cargar en Chrome
+## Load in Chrome
 
-1. Ejecuta `npm run build`
-2. Abre `chrome://extensions`
-3. Activa `Developer mode`
-4. Pulsa `Load unpacked`
-5. Selecciona la carpeta `dist`
+1. Run `npm run build`
+2. Open `chrome://extensions`
+3. Enable `Developer mode`
+4. Click `Load unpacked`
+5. Select the `dist` folder
 
-## Arquitectura
+## Project structure
+
+```text
+src/
+  background/
+  popup/
+  shared/
+  styles/
+
+public/
+  _locales/
+  icons/
+
+docs/
+  chrome-web-store.md
+  chrome-web-store-submission-es.md
+  privacy-policy.md
+```
+
+## Architecture
 
 - `src/background`
-  - cliente Tuya
-  - firma HMAC-SHA256
-  - storage sync/local
+  - Tuya client
+  - HMAC-SHA256 signing
+  - `chrome.storage.sync` and `chrome.storage.local`
   - runtime message handlers
 - `src/popup`
-  - UI compacta
-  - modo usuario
-  - modo desarrollador
+  - compact popup UI
+  - `User` mode
+  - `Developer` mode
 - `src/shared`
-  - modelos
-  - filtros
-  - formateo
+  - domain models
+  - filters
+  - formatting
+  - i18n
 
-## Notas
+## Security and storage
 
-- `chrome.storage.sync` guarda configuracion y alias.
-- `chrome.storage.sync` tambien guarda preferencias UI y orden manual de dispositivos.
-- `chrome.storage.local` guarda cache de dispositivos y action log para que el popup abra rapido.
-- El popup usa cache inmediata y luego refresca el estado real desde Tuya Cloud sin bloquear la UI.
-- Al abrir el popup o al recuperar foco, la extension intenta resincronizar el estado para corregir cambios hechos desde el telefono o desde otra app.
+- `chrome.storage.sync`
+  - Tuya credentials
+  - aliases
+  - UI preferences
+  - device order
+- `chrome.storage.local`
+  - cached device state
+  - action log
 
-## Chrome Web Store
+The current MVP stores the Tuya secret in Chrome sync storage for portability. A sensible hardening path would be encrypting the secret locally before syncing it.
 
-- Scripts:
-  - `npm run build:assets` genera iconos y piezas visuales para la tienda.
-  - `npm run package:webstore` construye `dist` y crea `webstore-package.zip`.
-- Assets generados:
-  - `public/icons`
-  - `store-assets/chrome-web-store`
-- Documentacion para publicar:
-  - `docs/chrome-web-store.md`
-  - `docs/chrome-web-store-submission-es.md`
-  - `docs/privacy-policy.md`
+## Chrome Web Store materials
+
+- Listing docs: [docs/chrome-web-store.md](/D:/xampp/htdocs/tuya_chrome_extension/docs/chrome-web-store.md)
+- Submission helper in Spanish: [docs/chrome-web-store-submission-es.md](/D:/xampp/htdocs/tuya_chrome_extension/docs/chrome-web-store-submission-es.md)
+- Privacy policy source: [docs/privacy-policy.md](/D:/xampp/htdocs/tuya_chrome_extension/docs/privacy-policy.md)
+- Published privacy policy: [dorlanpabon.github.io/tuya_chrome_extension/privacy-policy.html](https://dorlanpabon.github.io/tuya_chrome_extension/privacy-policy.html)
+- Upload package: [webstore-package.zip](/D:/xampp/htdocs/tuya_chrome_extension/webstore-package.zip)
+
+## Status
+
+This is a functional MV3 extension aimed at real Tuya switch control. It is not a boilerplate extension repo.
