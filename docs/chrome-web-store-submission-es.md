@@ -60,7 +60,7 @@ La extension usa storage para guardar la configuracion de Tuya Cloud, alias loca
 Justificacion de Permiso de host:
 
 ```text
-La extension necesita acceso a hosts HTTPS de Tuya Cloud para autenticar al usuario, listar dispositivos, leer el estado de cada canal y enviar comandos on/off a los dispositivos Tuya configurados por el usuario.
+La extension solo necesita acceso a una lista fija de hosts oficiales de Tuya OpenAPI para autenticar al usuario, listar dispositivos, leer el estado de cada canal y enviar comandos on/off. No accede a sitios arbitrarios ni interactua con paginas web del usuario.
 ```
 
 Usas codigo remoto:

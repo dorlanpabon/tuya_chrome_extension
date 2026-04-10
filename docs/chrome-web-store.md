@@ -57,11 +57,17 @@ Tuya Desk is designed for people who already use Tuya Cloud and want fast deskto
 
 Host access
 
-- The extension calls Tuya Cloud HTTPS endpoints selected by the user for their region and project.
+- The extension calls only these official Tuya Cloud HTTPS endpoints:
+- `https://openapi.tuyaus.com/*`
+- `https://openapi-ueaz.tuyaus.com/*`
+- `https://openapi.tuyaeu.com/*`
+- `https://openapi-weaz.tuyaeu.com/*`
+- `https://openapi.tuyacn.com/*`
+- `https://openapi.tuyain.com/*`
 
 Reviewer note:
 
-- `The extension only connects to Tuya Cloud endpoints configured by the user. It does not scrape the Tuya mobile app or read unrelated websites.`
+- `The extension only connects to a fixed allowlist of official Tuya OpenAPI hosts needed for authentication, device listing, status refresh and channel control. It does not access arbitrary websites, scrape the Tuya mobile app or inject scripts into pages.`
 
 ## Privacy disclosure draft
 

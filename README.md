@@ -27,6 +27,7 @@ Ruta local:
 - Configurar `TUYA_CLIENT_ID`
 - Configurar `TUYA_CLIENT_SECRET`
 - Configurar `TUYA_BASE_URL`
+- Validar `TUYA_BASE_URL` contra endpoints oficiales soportados de Tuya Cloud
 - Guardar configuracion en `chrome.storage.sync`
 - Reusar esa configuracion al cambiar de PC si Chrome sincroniza extensiones y storage
 - Probar conexion
@@ -60,6 +61,17 @@ Datos que normalmente pondras en la extension:
 - `Client Secret`: tu `Access Secret`
 - `Base URL`: por ejemplo `https://openapi.tuyaus.com` para Western America
 - `Region`: una etiqueta descriptiva, por ejemplo `Western America Data Center`
+
+Hosts oficiales soportados en esta build:
+
+- `https://openapi.tuyaus.com`
+- `https://openapi-ueaz.tuyaus.com`
+- `https://openapi.tuyaeu.com`
+- `https://openapi-weaz.tuyaeu.com`
+- `https://openapi.tuyacn.com`
+- `https://openapi.tuyain.com`
+
+La extension rechaza `baseUrl` fuera de esa lista para reducir permisos de host y simplificar la revision en Chrome Web Store.
 
 ## Seguridad
 

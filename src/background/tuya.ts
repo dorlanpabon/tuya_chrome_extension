@@ -19,6 +19,15 @@ interface TokenCache {
 
 let tokenCache: TokenCache | null = null;
 
+const SUPPORTED_TUYA_HOSTS = new Set([
+  "openapi.tuyaus.com",
+  "openapi-ueaz.tuyaus.com",
+  "openapi.tuyaeu.com",
+  "openapi-weaz.tuyaeu.com",
+  "openapi.tuyacn.com",
+  "openapi.tuyain.com",
+]);
+
 export async function testConnection(config: AppConfig): Promise<ConnectionTestResult> {
   const accessToken = await getToken(config, false);
   if (!accessToken) {
@@ -313,8 +322,9 @@ async function requestJson(
   body?: unknown,
   accessToken?: string,
 ): Promise<unknown> {
+  const normalizedBaseUrl = normalizeBaseUrl(config.baseUrl);
   const canonicalUrl = buildCanonicalUrl(path, query);
-  const url = `${config.baseUrl.replace(/\/+$/, "")}${canonicalUrl}`;
+  const url = `${normalizedBaseUrl}${canonicalUrl}`;
   const bodyString = body === undefined ? "" : JSON.stringify(body);
   const timestamp = String(Date.now());
   const nonce = crypto.randomUUID();
@@ -353,6 +363,28 @@ async function requestJson(
   const error = new Error(message) as Error & { code?: string };
   error.code = code;
   throw error;
+}
+
+function normalizeBaseUrl(baseUrl: string): string {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new Error("Base URL is not a valid HTTPS URL.");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("Base URL must use HTTPS.");
+  }
+
+  if (!SUPPORTED_TUYA_HOSTS.has(parsed.hostname)) {
+    throw new Error(
+      `Unsupported Tuya host. Use one of: ${Array.from(SUPPORTED_TUYA_HOSTS).join(", ")}`,
+    );
+  }
+
+  return parsed.origin.replace(/\/+$/, "");
 }
 
 async function signRequest(
