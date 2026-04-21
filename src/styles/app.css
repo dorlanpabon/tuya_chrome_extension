@@ -298,6 +298,11 @@ h3 {
   font-size: 0.66rem;
 }
 
+.segmented--compact button {
+  padding-inline: 6px;
+  font-size: 0.62rem;
+}
+
 .segmented button.is-active {
   background: rgba(115, 168, 255, 0.16);
   color: var(--text);

@@ -117,6 +117,12 @@ function normalizeUiPreferences(value: unknown): UiPreferences {
       raw.locale === "es" || raw.locale === "en" || raw.locale === "system"
         ? raw.locale
         : DEFAULT_UI_PREFERENCES.locale,
+    autoRefreshSeconds:
+      raw.autoRefreshSeconds === 15 ||
+      raw.autoRefreshSeconds === 30 ||
+      raw.autoRefreshSeconds === 60
+        ? raw.autoRefreshSeconds
+        : DEFAULT_UI_PREFERENCES.autoRefreshSeconds,
   };
 }
 
