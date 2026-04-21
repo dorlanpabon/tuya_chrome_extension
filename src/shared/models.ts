@@ -29,6 +29,7 @@ export interface ChannelAlias {
 export interface UiPreferences {
   viewMode: "user" | "developer";
   deviceOrder: string[];
+  favoriteDeviceIds: string[];
   locale: UiLocale;
   autoRefreshSeconds: 0 | 15 | 30 | 60;
 }
@@ -189,6 +190,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   viewMode: "user",
   deviceOrder: [],
+  favoriteDeviceIds: [],
   locale: "system",
   autoRefreshSeconds: 0,
 };

@@ -108,11 +108,8 @@ function normalizeUiPreferences(value: unknown): UiPreferences {
   const raw = value as Partial<UiPreferences>;
   return {
     viewMode: raw.viewMode === "developer" ? "developer" : "user",
-    deviceOrder: Array.isArray(raw.deviceOrder)
-      ? raw.deviceOrder
-          .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
-          .map((entry) => entry.trim())
-      : [],
+    deviceOrder: normalizeIdList(raw.deviceOrder),
+    favoriteDeviceIds: normalizeIdList(raw.favoriteDeviceIds),
     locale:
       raw.locale === "es" || raw.locale === "en" || raw.locale === "system"
         ? raw.locale
@@ -142,4 +139,23 @@ function normalizeConfig(value: unknown): AppConfig | null {
 
 function normalizeArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function normalizeIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<string[]>((acc, entry) => {
+    if (typeof entry !== "string") {
+      return acc;
+    }
+
+    const trimmed = entry.trim();
+    if (trimmed && !acc.includes(trimmed)) {
+      acc.push(trimmed);
+    }
+
+    return acc;
+  }, []);
 }
