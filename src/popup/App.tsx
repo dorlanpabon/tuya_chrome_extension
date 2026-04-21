@@ -14,6 +14,7 @@ import type {
   AppConfig,
   BootstrapPayload,
   Device,
+  SetDeviceChannelsResult,
   ToggleChannelResult,
   UiPreferences,
 } from "../shared/models";
@@ -450,6 +451,63 @@ export function App() {
     }
   }
 
+  async function handleDeviceChannels(deviceId: string, value: boolean) {
+    const device = state.devices.find((entry) => entry.id === deviceId);
+    if (!device) {
+      return;
+    }
+
+    const channelCodes = getControllableChannelCodes(device);
+    if (channelCodes.length === 0) {
+      return;
+    }
+
+    const previousDevices = state.devices;
+
+    setState((current) => {
+      const busyChannels = { ...current.busyChannels };
+      for (const channelCode of channelCodes) {
+        busyChannels[`${deviceId}:${channelCode}`] = true;
+      }
+
+      return {
+        ...current,
+        devices: applyOptimisticDeviceState(current.devices, deviceId, channelCodes, value),
+        busyChannels,
+      };
+    });
+
+    try {
+      const result = await extensionApi.setDeviceChannels({
+        deviceId,
+        value,
+      });
+
+      setState((current) => ({
+        ...current,
+        devices: applyStatusesToDevices(current.devices, result),
+        actionLog: [result.actionLogEntry, ...current.actionLog].slice(0, 30),
+      }));
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        devices: previousDevices,
+      }));
+      pushToast("error", toMessage(error));
+    } finally {
+      setState((current) => {
+        const busyChannels = { ...current.busyChannels };
+        for (const channelCode of channelCodes) {
+          delete busyChannels[`${deviceId}:${channelCode}`];
+        }
+        return {
+          ...current,
+          busyChannels,
+        };
+      });
+    }
+  }
+
   async function handleDeviceAlias(deviceId: string, alias: string) {
     try {
       await extensionApi.saveDeviceAlias({ deviceId, alias });
@@ -826,8 +884,12 @@ export function App() {
         </section>
       ) : (
         <section class={`device-grid device-grid--${state.uiPreferences.viewMode}`}>
-          {visibleDevices.map((device) =>
-            state.uiPreferences.viewMode === "user" ? (
+          {visibleDevices.map((device) => {
+            const controllableChannels = getControllableChannelCodes(device);
+            const showBulkActions = controllableChannels.length > 1;
+            const deviceBusy = hasBusyChannel(state.busyChannels, device.id, controllableChannels);
+
+            return state.uiPreferences.viewMode === "user" ? (
               <article class="device-card device-card--user" key={device.id}>
                 <div class="device-card__head">
                   <div class="device-card__title">
@@ -841,6 +903,25 @@ export function App() {
                     {device.online ? t(locale, "online") : t(locale, "offline")}
                   </span>
                 </div>
+
+                {showBulkActions && (
+                  <div class="device-card__bulk-actions">
+                    <button
+                      class="button button--secondary device-card__bulk-button"
+                      disabled={deviceBusy || !device.online}
+                      onClick={() => void handleDeviceChannels(device.id, true)}
+                    >
+                      {deviceBusy ? t(locale, "sending") : t(locale, "allOn")}
+                    </button>
+                    <button
+                      class="button button--secondary device-card__bulk-button"
+                      disabled={deviceBusy || !device.online}
+                      onClick={() => void handleDeviceChannels(device.id, false)}
+                    >
+                      {deviceBusy ? t(locale, "sending") : t(locale, "allOff")}
+                    </button>
+                  </div>
+                )}
 
                 <div class="channel-grid">
                   {device.channels.map((channel) => {
@@ -884,6 +965,25 @@ export function App() {
                     {device.online ? t(locale, "online") : t(locale, "offline")}
                   </span>
                 </div>
+
+                {showBulkActions && (
+                  <div class="device-card__bulk-actions">
+                    <button
+                      class="button button--secondary device-card__bulk-button"
+                      disabled={deviceBusy || !device.online}
+                      onClick={() => void handleDeviceChannels(device.id, true)}
+                    >
+                      {deviceBusy ? t(locale, "sending") : t(locale, "allOn")}
+                    </button>
+                    <button
+                      class="button button--secondary device-card__bulk-button"
+                      disabled={deviceBusy || !device.online}
+                      onClick={() => void handleDeviceChannels(device.id, false)}
+                    >
+                      {deviceBusy ? t(locale, "sending") : t(locale, "allOff")}
+                    </button>
+                  </div>
+                )}
 
                 <div class="meta-grid">
                   <span><strong>{t(locale, "deviceId")}</strong> {device.id}</span>
@@ -944,8 +1044,8 @@ export function App() {
                   ))}
                 </div>
               </article>
-            ),
-          )}
+            );
+          })}
         </section>
       )}
 
@@ -1028,12 +1128,22 @@ function applyOptimisticChannelState(
   channelCode: string,
   value: boolean,
 ): Device[] {
+  return applyOptimisticDeviceState(devices, deviceId, [channelCode], value);
+}
+
+function applyOptimisticDeviceState(
+  devices: Device[],
+  deviceId: string,
+  channelCodes: string[],
+  value: boolean,
+): Device[] {
+  const channelCodeSet = new Set(channelCodes);
   return devices.map((device) =>
     device.id === deviceId
       ? {
           ...device,
           channels: device.channels.map((channel) =>
-            channel.code === channelCode
+            channelCodeSet.has(channel.code)
               ? { ...channel, currentState: value }
               : channel,
           ),
@@ -1044,7 +1154,7 @@ function applyOptimisticChannelState(
 
 function applyStatusesToDevices(
   devices: Device[],
-  result: ToggleChannelResult,
+  result: ToggleChannelResult | SetDeviceChannelsResult,
 ): Device[] {
   return devices.map((device) =>
     device.id === result.deviceId
@@ -1063,6 +1173,20 @@ function applyStatusesToDevices(
         }
       : device,
   );
+}
+
+function getControllableChannelCodes(device: Device): string[] {
+  return device.channels
+    .filter((channel) => channel.controllable)
+    .map((channel) => channel.code);
+}
+
+function hasBusyChannel(
+  busyChannels: Record<string, boolean>,
+  deviceId: string,
+  channelCodes: string[],
+): boolean {
+  return channelCodes.some((channelCode) => busyChannels[`${deviceId}:${channelCode}`]);
 }
 
 function deriveDeviceOrder(devices: Device[]): string[] {
