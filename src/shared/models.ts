@@ -30,6 +30,7 @@ export interface UiPreferences {
   viewMode: "user" | "developer";
   deviceOrder: string[];
   locale: UiLocale;
+  autoRefreshSeconds: 0 | 15 | 30 | 60;
 }
 
 export interface TuyaFunction {
@@ -177,4 +178,5 @@ export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   viewMode: "user",
   deviceOrder: [],
   locale: "system",
+  autoRefreshSeconds: 0,
 };

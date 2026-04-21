@@ -78,6 +78,7 @@ const INITIAL_STATE: AppState = {
 };
 
 const SILENT_REFRESH_COOLDOWN_MS = 1_500;
+const AUTO_REFRESH_OPTIONS = [0, 15, 30] as const;
 
 export function App() {
   const [state, setState] = useState(INITIAL_STATE);
@@ -123,6 +124,26 @@ export function App() {
       document.removeEventListener("visibilitychange", syncVisibleState);
     };
   }, [state.hasConfig, state.bootstrapping]);
+
+  useEffect(() => {
+    if (
+      !state.hasConfig ||
+      state.bootstrapping ||
+      state.uiPreferences.autoRefreshSeconds === 0
+    ) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void requestSilentRefresh();
+      }
+    }, state.uiPreferences.autoRefreshSeconds * 1_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [state.hasConfig, state.bootstrapping, state.uiPreferences.autoRefreshSeconds, state.refreshing]);
 
   async function bootstrap() {
     try {
@@ -298,6 +319,29 @@ export function App() {
     try {
       await extensionApi.saveUiPreferences(nextPreferences);
     } catch (error) {
+      pushToast("error", toMessage(error));
+    }
+  }
+
+  async function setAutoRefreshSeconds(
+    autoRefreshSeconds: UiPreferences["autoRefreshSeconds"],
+  ) {
+    const nextPreferences = {
+      ...state.uiPreferences,
+      autoRefreshSeconds,
+    };
+    setState((current) => ({
+      ...current,
+      uiPreferences: nextPreferences,
+    }));
+
+    try {
+      await extensionApi.saveUiPreferences(nextPreferences);
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        uiPreferences: state.uiPreferences,
+      }));
       pushToast("error", toMessage(error));
     }
   }
@@ -583,6 +627,18 @@ export function App() {
                   : filter === "online"
                     ? t(locale, "filterOnline")
                     : t(locale, "filterOffline")}
+              </button>
+            ))}
+          </div>
+          <div class="segmented segmented--compact" aria-label={t(locale, "autoRefreshTitle")}>
+            {AUTO_REFRESH_OPTIONS.map((seconds) => (
+              <button
+                class={state.uiPreferences.autoRefreshSeconds === seconds ? "is-active" : ""}
+                disabled={!state.hasConfig || state.bootstrapping}
+                onClick={() => void setAutoRefreshSeconds(seconds)}
+                title={t(locale, "autoRefreshTitle")}
+              >
+                {seconds === 0 ? t(locale, "autoRefreshOff") : `${seconds}s`}
               </button>
             ))}
           </div>
