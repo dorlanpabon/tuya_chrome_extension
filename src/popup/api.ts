@@ -7,6 +7,8 @@ import type {
   RuntimeRequest,
   SaveChannelAliasPayload,
   SaveDeviceAliasPayload,
+  SetDeviceChannelsPayload,
+  SetDeviceChannelsResult,
   ToggleChannelPayload,
   ToggleChannelResult,
   UiPreferences,
@@ -37,6 +39,9 @@ export const extensionApi = {
   },
   toggleChannel(payload: ToggleChannelPayload): Promise<ToggleChannelResult> {
     return sendMessage({ type: "toggle-channel", payload });
+  },
+  setDeviceChannels(payload: SetDeviceChannelsPayload): Promise<SetDeviceChannelsResult> {
+    return sendMessage({ type: "set-device-channels", payload });
   },
   saveUiPreferences(payload: UiPreferences): Promise<UiPreferences> {
     return sendMessage({ type: "save-ui-preferences", payload });

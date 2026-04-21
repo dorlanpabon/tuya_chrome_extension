@@ -8,7 +8,7 @@ import {
   saveDeviceAlias,
   saveUiPreferences,
 } from "./storage";
-import { listDevices, testConnection, toggleChannel } from "./tuya";
+import { listDevices, setDeviceChannels, testConnection, toggleChannel } from "./tuya";
 import type {
   BootstrapPayload,
   ConnectionStatus,
@@ -67,6 +67,29 @@ async function handleRequest(request: RuntimeRequest): Promise<unknown> {
 
       const result = await toggleChannel(config, syncState, request.payload);
       const localState = await loadLocalState();
+      const cachedDevices = applyStatusesToDevices(
+        localState.cachedDevices,
+        result.deviceId,
+        result.statuses,
+      );
+
+      await saveCachedDevices(cachedDevices);
+      await appendActionLog(result.actionLogEntry);
+      return result;
+    }
+    case "set-device-channels": {
+      const syncState = await loadSyncState();
+      const config = syncState.config;
+      if (!config) {
+        throw new Error("Save your Tuya credentials first.");
+      }
+
+      const localState = await loadLocalState();
+      const channelCodes = resolveControllableChannels(
+        localState.cachedDevices,
+        request.payload.deviceId,
+      );
+      const result = await setDeviceChannels(config, syncState, request.payload, channelCodes);
       const cachedDevices = applyStatusesToDevices(
         localState.cachedDevices,
         result.deviceId,
@@ -181,4 +204,18 @@ function applyStatusesToDevices(
       },
     };
   });
+}
+
+function resolveControllableChannels(
+  devices: BootstrapPayload["devices"],
+  deviceId: string,
+): string[] {
+  const device = devices.find((entry) => entry.id === deviceId);
+  if (!device) {
+    throw new Error("Unable to find cached device channels.");
+  }
+
+  return device.channels
+    .filter((channel) => channel.controllable)
+    .map((channel) => channel.code);
 }

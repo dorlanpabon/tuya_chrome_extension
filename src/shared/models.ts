@@ -117,7 +117,18 @@ export interface ToggleChannelPayload {
   value: boolean;
 }
 
+export interface SetDeviceChannelsPayload {
+  deviceId: string;
+  value: boolean;
+}
+
 export interface ToggleChannelResult {
+  deviceId: string;
+  statuses: TuyaStatus[];
+  actionLogEntry: ActionLogEntry;
+}
+
+export interface SetDeviceChannelsResult {
   deviceId: string;
   statuses: TuyaStatus[];
   actionLogEntry: ActionLogEntry;
@@ -152,6 +163,7 @@ export type RuntimeRequest =
   | { type: "save-config"; payload: AppConfig }
   | { type: "refresh-devices" }
   | { type: "toggle-channel"; payload: ToggleChannelPayload }
+  | { type: "set-device-channels"; payload: SetDeviceChannelsPayload }
   | { type: "save-ui-preferences"; payload: UiPreferences }
   | { type: "save-device-alias"; payload: SaveDeviceAliasPayload }
   | { type: "save-channel-alias"; payload: SaveChannelAliasPayload };

@@ -4,6 +4,7 @@ import type {
   ConnectionTestResult,
   Device,
   DeviceAlias,
+  SetDeviceChannelsResult,
   ToggleChannelPayload,
   ToggleChannelResult,
   TuyaFunction,
@@ -79,35 +80,14 @@ export async function toggleChannel(
   metadata: { deviceAliases: DeviceAlias[] },
   payload: ToggleChannelPayload,
 ): Promise<ToggleChannelResult> {
-  const commandBody = {
-    commands: [{ code: payload.channelCode, value: payload.value }],
-  };
+  await sendDeviceCommands(config, payload.deviceId, [
+    { code: payload.channelCode, value: payload.value },
+  ]);
 
-  const endpoints = [
-    `/v1.0/devices/${payload.deviceId}/commands`,
-    `/v1.0/iot-03/devices/${payload.deviceId}/commands`,
-  ];
-
-  let accepted = false;
-  for (const path of endpoints) {
-    try {
-      await authorizedRequest(config, "POST", path, {}, commandBody);
-      accepted = true;
-      break;
-    } catch {
-      continue;
-    }
-  }
-
-  if (!accepted) {
-    throw new Error("None of the Tuya command endpoints accepted the request.");
-  }
-
-  const statuses = await fetchConfirmedChannelStatus(
+  const statuses = await fetchConfirmedChannelStatuses(
     config,
     payload.deviceId,
-    payload.channelCode,
-    payload.value,
+    [{ code: payload.channelCode, value: payload.value }],
   );
 
   return {
@@ -127,11 +107,66 @@ export async function toggleChannel(
   };
 }
 
-async function fetchConfirmedChannelStatus(
+export async function setDeviceChannels(
+  config: AppConfig,
+  metadata: { deviceAliases: DeviceAlias[] },
+  payload: { deviceId: string; value: boolean },
+  channelCodes: string[],
+): Promise<SetDeviceChannelsResult> {
+  if (channelCodes.length === 0) {
+    throw new Error("No controllable channels detected for this device.");
+  }
+
+  const commands = channelCodes.map((code) => ({ code, value: payload.value }));
+  await sendDeviceCommands(config, payload.deviceId, commands);
+
+  const statuses = await fetchConfirmedChannelStatuses(config, payload.deviceId, commands);
+
+  return {
+    deviceId: payload.deviceId,
+    statuses,
+    actionLogEntry: {
+      timestampMs: Date.now(),
+      action: payload.value ? "device_channels_on" : "device_channels_off",
+      deviceId: payload.deviceId,
+      deviceName:
+        metadata.deviceAliases.find((entry) => entry.deviceId === payload.deviceId)?.alias ??
+        null,
+      channelCode: null,
+      success: true,
+      message: `${channelCodes.length} channel(s) ${payload.value ? "turned on" : "turned off"}`,
+    },
+  };
+}
+
+async function sendDeviceCommands(
   config: AppConfig,
   deviceId: string,
-  channelCode: string,
-  expectedValue: boolean,
+  commands: Array<{ code: string; value: boolean }>,
+): Promise<void> {
+  const endpoints = [
+    `/v1.0/devices/${deviceId}/commands`,
+    `/v1.0/iot-03/devices/${deviceId}/commands`,
+  ];
+
+  const commandBody = { commands };
+
+  for (const path of endpoints) {
+    try {
+      await authorizedRequest(config, "POST", path, {}, commandBody);
+      return;
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("None of the Tuya command endpoints accepted the request.");
+}
+
+async function fetchConfirmedChannelStatuses(
+  config: AppConfig,
+  deviceId: string,
+  commands: Array<{ code: string; value: boolean }>,
 ): Promise<TuyaStatus[]> {
   let lastStatuses: TuyaStatus[] = [];
 
@@ -143,8 +178,11 @@ async function fetchConfirmedChannelStatus(
     try {
       const statuses = await fetchDeviceStatus(config, deviceId);
       lastStatuses = statuses;
-      const match = statuses.find((entry) => entry.code === channelCode);
-      if (parseBoolean(match?.value) === expectedValue) {
+      const allMatched = commands.every((command) => {
+        const match = statuses.find((entry) => entry.code === command.code);
+        return parseBoolean(match?.value) === command.value;
+      });
+      if (allMatched) {
         return statuses;
       }
     } catch {
@@ -152,13 +190,18 @@ async function fetchConfirmedChannelStatus(
     }
   }
 
-  const existing = lastStatuses.find((entry) => entry.code === channelCode);
-  if (existing) {
-    existing.value = expectedValue;
-    return lastStatuses;
+  const statusMap = new Map(lastStatuses.map((status) => [status.code, status] as const));
+  for (const command of commands) {
+    const existing = statusMap.get(command.code);
+    if (existing) {
+      existing.value = command.value;
+      continue;
+    }
+
+    lastStatuses.push({ code: command.code, value: command.value });
   }
 
-  return [...lastStatuses, { code: channelCode, value: expectedValue }];
+  return lastStatuses;
 }
 
 async function fetchDeviceSummaries(config: AppConfig): Promise<unknown[]> {
