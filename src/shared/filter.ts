@@ -3,14 +3,19 @@ import type { Device } from "./models";
 export function orderDevices(
   devices: Device[],
   deviceOrder: string[],
+  favoriteDeviceIds: string[] = [],
 ): Device[] {
-  if (deviceOrder.length === 0) {
-    return devices;
-  }
-
   const orderIndex = new Map(deviceOrder.map((deviceId, index) => [deviceId, index]));
+  const favoriteSet = new Set(favoriteDeviceIds);
 
   return [...devices].sort((left, right) => {
+    const leftFavorite = favoriteSet.has(left.id);
+    const rightFavorite = favoriteSet.has(right.id);
+
+    if (leftFavorite !== rightFavorite) {
+      return leftFavorite ? -1 : 1;
+    }
+
     const leftIndex = orderIndex.get(left.id);
     const rightIndex = orderIndex.get(right.id);
 
@@ -30,9 +35,11 @@ export function orderDevices(
 export function filterDevices(
   devices: Device[],
   search: string,
-  filter: "all" | "online" | "offline",
+  filter: "all" | "online" | "offline" | "favorites",
+  favoriteDeviceIds: string[] = [],
 ): Device[] {
   const query = search.trim().toLowerCase();
+  const favoriteSet = new Set(favoriteDeviceIds);
 
   return devices.filter((device) => {
     const matchesQuery =
@@ -46,7 +53,8 @@ export function filterDevices(
     const matchesFilter =
       filter === "all" ||
       (filter === "online" && device.online) ||
-      (filter === "offline" && !device.online);
+      (filter === "offline" && !device.online) ||
+      (filter === "favorites" && favoriteSet.has(device.id));
 
     return matchesQuery && matchesFilter;
   });

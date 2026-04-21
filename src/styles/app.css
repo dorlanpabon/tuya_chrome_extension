@@ -148,6 +148,7 @@ h3 {
 .panel__actions,
 .segmented,
 .device-card__head,
+.device-card__head-actions,
 .device-card__title,
 .channel-row,
 .channel-row__copy,
@@ -382,6 +383,20 @@ h3 {
   padding: 4px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
+}
+
+.device-card__head-actions {
+  margin-left: auto;
+}
+
+.device-card__favorite {
+  color: #8ea0c3;
+}
+
+.device-card__favorite.is-active {
+  color: var(--warm);
+  border-color: rgba(255, 200, 109, 0.24);
+  background: rgba(255, 200, 109, 0.12);
 }
 
 .meta-grid {

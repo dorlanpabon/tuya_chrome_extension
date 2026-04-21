@@ -20,7 +20,7 @@ import type {
 } from "../shared/models";
 import { DEFAULT_CONFIG, DEFAULT_UI_PREFERENCES } from "../shared/models";
 
-type StatusFilter = "all" | "online" | "offline";
+type StatusFilter = "all" | "online" | "offline" | "favorites";
 type ToastTone = "success" | "error" | "info";
 
 const TUYA_PLATFORM_URL = "https://platform.tuya.com/";
@@ -94,13 +94,24 @@ export function App() {
     [state.uiPreferences.locale],
   );
   const orderedDevices = useMemo(
-    () => orderDevices(state.devices, state.uiPreferences.deviceOrder),
-    [state.devices, state.uiPreferences.deviceOrder],
+    () =>
+      orderDevices(
+        state.devices,
+        state.uiPreferences.deviceOrder,
+        state.uiPreferences.favoriteDeviceIds,
+      ),
+    [state.devices, state.uiPreferences.deviceOrder, state.uiPreferences.favoriteDeviceIds],
   );
 
   const visibleDevices = useMemo(
-    () => filterDevices(orderedDevices, state.searchQuery, state.statusFilter),
-    [orderedDevices, state.searchQuery, state.statusFilter],
+    () =>
+      filterDevices(
+        orderedDevices,
+        state.searchQuery,
+        state.statusFilter,
+        state.uiPreferences.favoriteDeviceIds,
+      ),
+    [orderedDevices, state.searchQuery, state.statusFilter, state.uiPreferences.favoriteDeviceIds],
   );
 
   useEffect(() => {
@@ -408,6 +419,37 @@ export function App() {
     }
   }
 
+  async function toggleFavoriteDevice(deviceId: string) {
+    const previousPreferences = state.uiPreferences;
+    const favoriteDeviceIds = state.uiPreferences.favoriteDeviceIds.includes(deviceId)
+      ? state.uiPreferences.favoriteDeviceIds.filter((entry) => entry !== deviceId)
+      : [deviceId, ...state.uiPreferences.favoriteDeviceIds];
+
+    const nextPreferences = {
+      ...state.uiPreferences,
+      favoriteDeviceIds,
+    };
+
+    setState((current) => ({
+      ...current,
+      uiPreferences: nextPreferences,
+    }));
+
+    try {
+      const preferences = await extensionApi.saveUiPreferences(nextPreferences);
+      setState((current) => ({
+        ...current,
+        uiPreferences: preferences,
+      }));
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        uiPreferences: previousPreferences,
+      }));
+      pushToast("error", toMessage(error));
+    }
+  }
+
   async function handleToggle(deviceId: string, channelCode: string, value: boolean) {
     const busyKey = `${deviceId}:${channelCode}`;
     const previousDevices = state.devices;
@@ -670,7 +712,7 @@ export function App() {
           </label>
 
           <div class="segmented">
-            {(["all", "online", "offline"] as const).map((filter) => (
+            {(["all", "favorites", "online", "offline"] as const).map((filter) => (
               <button
                 class={state.statusFilter === filter ? "is-active" : ""}
                 onClick={() =>
@@ -682,6 +724,8 @@ export function App() {
               >
                 {filter === "all"
                   ? t(locale, "filterAll")
+                  : filter === "favorites"
+                    ? t(locale, "filterFavorites")
                   : filter === "online"
                     ? t(locale, "filterOnline")
                     : t(locale, "filterOffline")}
@@ -888,6 +932,7 @@ export function App() {
             const controllableChannels = getControllableChannelCodes(device);
             const showBulkActions = controllableChannels.length > 1;
             const deviceBusy = hasBusyChannel(state.busyChannels, device.id, controllableChannels);
+            const favorite = state.uiPreferences.favoriteDeviceIds.includes(device.id);
 
             return state.uiPreferences.viewMode === "user" ? (
               <article class="device-card device-card--user" key={device.id}>
@@ -902,6 +947,13 @@ export function App() {
                   <span class={`status-chip ${device.online ? "is-online" : "is-offline"}`}>
                     {device.online ? t(locale, "online") : t(locale, "offline")}
                   </span>
+                  <button
+                    class={`icon-button device-card__favorite ${favorite ? "is-active" : ""}`}
+                    onClick={() => void toggleFavoriteDevice(device.id)}
+                    title={favorite ? t(locale, "favoriteRemove") : t(locale, "favoriteAdd")}
+                  >
+                    {renderFavoriteIcon(favorite)}
+                  </button>
                 </div>
 
                 {showBulkActions && (
@@ -961,9 +1013,18 @@ export function App() {
                     <h3>{device.name}</h3>
                     <p>{formatDeviceSubtitle(device, state.uiPreferences.locale)}</p>
                   </div>
-                  <span class={`status-chip ${device.online ? "is-online" : "is-offline"}`}>
-                    {device.online ? t(locale, "online") : t(locale, "offline")}
-                  </span>
+                  <div class="device-card__head-actions">
+                    <span class={`status-chip ${device.online ? "is-online" : "is-offline"}`}>
+                      {device.online ? t(locale, "online") : t(locale, "offline")}
+                    </span>
+                    <button
+                      class={`icon-button device-card__favorite ${favorite ? "is-active" : ""}`}
+                      onClick={() => void toggleFavoriteDevice(device.id)}
+                      title={favorite ? t(locale, "favoriteRemove") : t(locale, "favoriteAdd")}
+                    >
+                      {renderFavoriteIcon(favorite)}
+                    </button>
+                  </div>
                 </div>
 
                 {showBulkActions && (
@@ -1187,6 +1248,17 @@ function hasBusyChannel(
   channelCodes: string[],
 ): boolean {
   return channelCodes.some((channelCode) => busyChannels[`${deviceId}:${channelCode}`]);
+}
+
+function renderFavoriteIcon(active: boolean) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3.8l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z"
+        fill={active ? "currentColor" : "none"}
+      />
+    </svg>
+  );
 }
 
 function deriveDeviceOrder(devices: Device[]): string[] {
