@@ -32,8 +32,8 @@ body,
 }
 
 body {
-  width: 400px;
-  min-height: 560px;
+  width: 388px;
+  min-height: 520px;
 }
 
 button,
@@ -67,9 +67,9 @@ svg circle {
 
 .app-shell {
   min-height: 100vh;
-  padding: 8px;
+  padding: 6px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .topbar,
@@ -82,17 +82,17 @@ svg circle {
 }
 
 .topbar {
-  border-radius: 16px;
-  padding: 8px;
+  border-radius: 14px;
+  padding: 6px;
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .topbar__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .topbar__row--lower {
@@ -103,15 +103,15 @@ svg circle {
 .brand {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 
 .brand__mark {
-  width: 26px;
-  height: 26px;
-  padding: 6px;
-  border-radius: 9px;
+  width: 23px;
+  height: 23px;
+  padding: 5px;
+  border-radius: 8px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
 }
 
@@ -132,7 +132,7 @@ p {
 }
 
 h1 {
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   letter-spacing: -0.04em;
 }
 
@@ -141,7 +141,7 @@ h2 {
 }
 
 h3 {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .topbar__actions,
@@ -156,19 +156,19 @@ h3 {
 .meta-grid {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .panel {
   border-radius: 14px;
-  padding: 8px;
+  padding: 7px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .sync-banner {
   border-radius: 12px;
-  padding: 6px 8px;
+  padding: 5px 7px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -244,7 +244,7 @@ h3 {
 
 .search {
   flex: 1;
-  min-width: 112px;
+  min-width: 96px;
 }
 
 .search input,
@@ -255,7 +255,7 @@ h3 {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
-  padding: 7px 9px;
+  padding: 6px 8px;
   outline: none;
 }
 
@@ -292,10 +292,10 @@ h3 {
 }
 
 .segmented button {
-  padding: 4px 7px;
+  padding: 3px 6px;
   background: transparent;
   color: var(--text-soft);
-  font-size: 0.66rem;
+  font-size: 0.62rem;
 }
 
 .segmented--compact button {
@@ -313,7 +313,7 @@ h3 {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
-  padding: 6px 10px;
+  padding: 5px 8px;
 }
 
 .button--primary {
@@ -337,9 +337,9 @@ h3 {
 }
 
 .icon-button {
-  width: 28px;
-  height: 28px;
-  padding: 6px;
+  width: 26px;
+  height: 26px;
+  padding: 5px;
 }
 
 .icon-button.is-active {
@@ -349,7 +349,7 @@ h3 {
 
 .device-grid {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .device-grid--user {
@@ -361,9 +361,9 @@ h3 {
 }
 
 .device-card--user {
-  padding: 7px;
+  padding: 6px;
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .device-card--developer {
@@ -377,9 +377,9 @@ h3 {
 }
 
 .device-card__icon {
-  width: 24px;
-  height: 24px;
-  padding: 5px;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
 }
@@ -392,36 +392,36 @@ h3 {
 .channel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.channel-tile {
-  min-height: 64px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  color: var(--text-soft);
-  padding: 6px 4px;
-  display: grid;
-  justify-items: center;
-  align-content: center;
   gap: 3px;
 }
 
+.channel-tile {
+  min-height: 54px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  color: var(--text-soft);
+  padding: 5px 4px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+}
+
 .channel-tile__icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .channel-tile__label {
-  font-size: 0.64rem;
+  font-size: 0.6rem;
   line-height: 1.2;
   text-align: center;
   color: var(--text);
 }
 
 .channel-tile__state {
-  font-size: 0.52rem;
+  font-size: 0.48rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -527,7 +527,7 @@ h3 {
 }
 
 .empty-state {
-  min-height: 180px;
+  min-height: 150px;
   display: grid;
   place-items: center;
   text-align: center;
@@ -535,7 +535,7 @@ h3 {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-soft);
-  padding: 14px;
+  padding: 12px;
 }
 
 .toast-stack {
